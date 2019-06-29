@@ -6,8 +6,12 @@ const data = require('./data')
 const bot = new telegraf(data.token)
 const db = {}
 
-mongo.connect(data.url, {useNewUrlParser: true}).then((cli) => {
-	db.base = cli.db('pickpicbot')
+mongo.connect(data.mongoURL, {useNewUrlParser: true}), (error, client) => {
+	if (err) {
+    		sendError(err)
+  	}
+	
+	db.base = client.db('pickpicbot')
 
 	bot.start(start)
 
@@ -41,10 +45,10 @@ async function text(ctx) {
 			if (isNaN(y)) {
 				y = x
 			}
-			await ctx.reply('Searching...')
 			await ctx.replyWithChatAction('upload_photo')
+			await ctx.reply('Searching...')
 			let url = await get(x, y)
-			if (url === null) {
+			if (!url) {
 				return ctx.reply('Picture not found. Try again')
 			}
 			let keys = {inline_keyboard: [[{text: '⤴️Share', switch_inline_query: url}]]}
@@ -102,4 +106,15 @@ async function stat(ctx) {
 async function start(ctx) {
 	let keys = {keyboard: [['Get Random Picture'],['More Bots', 'Statistics']], resize_keyboard: true}
 	return await ctx.reply('Hello\n\nJust send me size of picture\n\nExample:\n```200*300\n1000*400\n1920*1080\n100\n200\n20000```', {parse_mode: 'markdown', reply_markup: keys})
+}
+
+function sendError (err, ctx) {
+  if (!ctx) {
+    return bot.telegram.sendMessage(data.dev, err)
+  }
+
+  bot.telegram.sendMessage(
+    data.devId,
+    `Error: \nUser: [${ctx.from.first_name}](tg://user?id=${ctx.from.id}) \nError's text: ${err}`
+  )
 }
