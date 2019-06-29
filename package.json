@@ -1,0 +1,32 @@
+{
+  "name": "pickpic",
+  "version": "1.0.0",
+  "description": "Telegram Bot @pickpicbot",
+  "main": "index.js",
+  "scripts": {
+    "test": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tashpjak/pickpicbot.git"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "picture",
+    "pick"
+  ],
+  "author": "tashpjak",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tashpjak/pickpicbot/issues"
+  },
+  "homepage": "https://github.com/tashpjak/pickpicbot#readme",
+  "dependencies": {
+    "mongodb": "^3.2.7",
+    "telegraf": "^3.30.1"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.1"
+  }
+}

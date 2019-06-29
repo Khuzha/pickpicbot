@@ -1,0 +1,4 @@
+node_modules/
+data.js
+.idea
+package-lock.json
