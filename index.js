@@ -5,18 +5,19 @@ const data = require('./data')
 
 const bot = new telegraf(data.token)
 const db = {}
+
 mongo.connect(data.url, {useNewUrlParser: true}).then((cli) => {
 	db.base = cli.db('pickpicbot')
 
 	bot.start(start)
 
-	bot.hears('Get Random Picture', random)
-	bot.hears('More Bots', more)
-	bot.hears('Statistics', stat)
+	bot.hears('Get Random Picture', (ctx) => return random(ctx))
+	bot.hears('More Bots', (ctx) => return more(ctx))
+	bot.hears('Statistics', (ctx) => return stat(ctx))
 
-	bot.on('inline_query', inline)
+	bot.on('inline_query', (ctx) => return inline(ctx))
 
-	bot.on('text', text)
+	bot.on('text', (ctx) => return text(ctx))
 
 	bot.catch((err) => {
 		console.log(err)
