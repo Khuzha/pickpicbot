@@ -1,116 +1,113 @@
-const telegraf = require('telegraf')
+const Telegraf = require('telegraf')
 const mongo = require('mongodb').MongoClient
 const axios = require('axios')
 const data = require('./data')
 
-const bot = new telegraf(data.token)
+const bot = new Telegraf(data.token)
 const db = {}
 
-mongo.connect(data.mongoURL, {useNewUrlParser: true}), (error, client) => {
+mongo.connect(data.url, { useNewUrlParser: true }), (error, client) => {
 	if (err) {
     		sendError(err)
   	}
 	
-	db.base = client.db('pickpicbot')
+	db.base = cli.db('pickpicbot')
 
 	bot.start(start)
 
 	bot.hears('Get Random Picture', (ctx) => return random(ctx))
-	bot.hears('More Bots', (ctx) => return more(ctx))
-	bot.hears('Statistics', (ctx) => return stat(ctx))
+	bot.hears('More Bots', (ctx) => return ctx.reply('@tashpjak'))
+	bot.hears('Statistics', (ctx) => return ctx.reply('Coming Soon'))
 
 	bot.on('inline_query', (ctx) => return inline(ctx))
-
-	bot.on('text', (ctx) => return text(ctx))
+	bot.hears([/^[0-9]{2, 10}*[0-9]{2, 10}$/, /^[0-9]{2, 10}$/], (ctx) => return value(ctx))
 
 	bot.catch((err) => {
-		console.log(err)
+		sendError(err)
 	})
+	
 	console.log('Connected')
 
-	return bot.launch({})
+	bot.launch({})
 })
 
-async function text(ctx) {
+async function value (ctx) {
 	await ctx.replyWithChatAction('typing')
-	let check = ctx.message.text.split('*')
-	if (check.length === 2 || check.length === 1) {
-		let x = parseInt(check[0])
-		let y = parseInt(check[1])
-		if (isNaN(x)) {
-			return ctx.reply('Invalid query. Try again')
-		} else if(Math.abs(x-y) > 190 && (x < 30 || y < 30)) {
+	const check = ctx.message.text.split('*')
+	if ([1, 2].includes(check.length)) {
+		let x = Math.round(check[0])
+		let y = Math.round(check[1])
+		if(Math.abs(x-y) > 190 && (x < 30 || y < 30)) {
 			return ctx.reply('Invalid size. Please change resolution')
 		} else {
-			if (isNaN(y)) {
-				y = x
-			}
-			await ctx.replyWithChatAction('upload_photo')
+			const url = await get(x, y)
+			const keys = {inline_keyboard: [[{ text: '⤴️Share', switch_inline_query: url }]]}
+			
 			await ctx.reply('Searching...')
-			let url = await get(x, y)
+			await ctx.replyWithChatAction('upload_photo')
+			
+			if (!y) y = x
+
 			if (!url) {
 				return ctx.reply('Picture not found. Try again')
 			}
-			let keys = {inline_keyboard: [[{text: '⤴️Share', switch_inline_query: url}]]}
-			return ctx.replyWithPhoto('https://picsum.photos/id/' + url, {reply_markup: keys})
+			
+			return ctx.replyWithPhoto('https://picsum.photos/id/' + url, { reply_markup: keys })
 		}
 	} else {
 		return ctx.reply('Invalid query. Try again')
 	}
 }
 
-async function inline(ctx) {
-	let data = ctx.update.inline_query.query
-	let checkPic = data.split('/')
+async function inline (ctx) {
+	const query = ctx.update.inline_query.query
+	const checkPic = query.split('/')
 	if(checkPic.length === 3) {
-		return await bot.telegram.answerInlineQuery(ctx.update.inline_query.id, [{type: 'photo', id: checkPic[0], photo_url: 'https://picsum.photos/id/' + data, thumb_url: 'https://picsum.photos/id/' + data}])
+		return await bot.telegram.answerInlineQuery(ctx.update.inline_query.id, [{type: 'photo', id: checkPic[0], photo_url: 'https://picsum.photos/id/' + query, thumb_url: 'https://picsum.photos/id/' + query}])
 	}
 	return await bot.telegram.answerInlineQuery(ctx.update.inline_query.id, [])
 }
 
-async function random(ctx) {
+async function random (ctx) {
+	const x = Math.floor(Math.random() * 4096) + 1
+	const y = Math.floor(Math.random() * 4096) + 1
+	const url = await get(x, y, true)
+	const keys = {inline_keyboard: [[{ text: '⤴️Share', switch_inline_query: url }]]}
+	
 	await ctx.replyWithChatAction('typing')
 	await ctx.reply('Searching...')
-	let x = Math.floor(Math.random() * 4096) + 1
-	let y = Math.floor(Math.random() * 4096) + 1
 	await ctx.replyWithChatAction('upload_photo')
-	let url = await get(x, y, true)
-	let keys = {inline_keyboard: [[{text: '⤴️Share', switch_inline_query: url}]]}
-	return await ctx.replyWithPhoto('https://picsum.photos/id/' + url, {reply_markup: keys})
+	
+	return ctx.replyWithPhoto('https://picsum.photos/id/' + url, { reply_markup: keys })
 }
 
-async function get(x, y, force = false) {
-	let data = ''
+async function get (x, y, force = false) {
+	let res = ''
 	let url = 'https://picsum.photos/' + x + '/' + y
 	try {
-		data = await axios(url)
-		url = data.request.res.responseUrl.split('id/')[1]
+		res = await axios(url)
+		url = res.request.res.responseUrl.split('id/')[1]
 	} catch (e) {
 		if(force) {
 			url = await get(x, y, true)
 		} else {
-			url = null
+			sendError()
 		}
 	}
 	return url
 }
-async function more(ctx) {
-	return await ctx.reply('@tashpjak')
 
+async function start (ctx) {
+	const keys = { keyboard: [['Get Random Picture'], ['More Bots', 'Statistics']], resize_keyboard: true }
+	return ctx.reply(
+		'Hello\n\nJust send me size of picture\n\nExample:\n```200*300\n1000*400\n1920*1080\n100\n200\n20000```',
+		{ parse_mode: 'markdown', reply_markup: keys }
+	)
 }
 
-async function stat(ctx) {
-	return await ctx.reply('Coming Soon')
-}
-
-async function start(ctx) {
-	let keys = {keyboard: [['Get Random Picture'],['More Bots', 'Statistics']], resize_keyboard: true}
-	return await ctx.reply('Hello\n\nJust send me size of picture\n\nExample:\n```200*300\n1000*400\n1920*1080\n100\n200\n20000```', {parse_mode: 'markdown', reply_markup: keys})
-}
-
-function sendError (err, ctx) {
+sendError = (err, ctx) => {
   if (!ctx) {
-    return bot.telegram.sendMessage(data.dev, err)
+    return bot.telegram.sendMessage(data.devId, err)
   }
 
   bot.telegram.sendMessage(
