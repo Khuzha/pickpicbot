@@ -17,7 +17,7 @@ mongo.connect(data.url, {useNewUrlParser: true}).then((cli) => {
 
 	bot.on('inline_query', (ctx) => return inline(ctx))
 
-	bot.on('text', text)
+	bot.on('text', (ctx) => return text(ctx))
 
 	bot.catch((err) => {
 		console.log(err)
