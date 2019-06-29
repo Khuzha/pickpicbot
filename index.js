@@ -32,11 +32,14 @@ async function text(ctx) {
 	if (check.length === 2 || check.length === 1) {
 		let x = parseInt(check[0])
 		let y = parseInt(check[1])
-		if (isNaN(x) || isNaN(y)) {
+		if (isNaN(x)) {
 			return ctx.reply('Invalid query. Try again')
 		} else if(Math.abs(x-y) > 190 && (x < 30 || y < 30)) {
 			return ctx.reply('Invalid size. Please change resolution')
 		} else {
+			if (isNaN(y)) {
+				y = x
+			}
 			await ctx.reply('Searching...')
 			await ctx.replyWithChatAction('upload_photo')
 			let url = await get(x, y)
